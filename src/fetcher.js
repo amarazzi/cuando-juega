@@ -94,56 +94,87 @@ async function fetchNextMatches(teamName) {
 }
 
 /**
- * Fetch up to 3 next matches from ESPN team schedule endpoint.
+ * Fetch up to 3 next matches by scanning ESPN scoreboard day by day.
+ * The /schedule endpoint doesn't reliably return future events,
+ * so we query the scoreboard for each day over the next 30 days
+ * and collect matches involving our team.
  */
 async function fetchMultipleFromESPN(teamInfo, teamName) {
-  const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/teams/${teamInfo.id}/schedule`;
-
-  const response = await axios.get(url, {
-    headers: { 'Accept': 'application/json' },
-    timeout: 15000,
-  });
-
-  const events = response.data?.events || [];
+  const teamId = String(teamInfo.id);
   const now = new Date();
+  const matches = [];
 
-  // Filter to future events only and take up to 3
-  const futureEvents = events
-    .filter((e) => new Date(e.date) > now)
-    .sort((a, b) => new Date(a.date) - new Date(b.date))
-    .slice(0, 3);
+  // Generate date strings for next 30 days (YYYYMMDD format)
+  const dates = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    dates.push(`${yyyy}${mm}${dd}`);
+  }
 
-  if (futureEvents.length === 0) return null;
+  // Query scoreboard for each date until we find 3 matches
+  for (const date of dates) {
+    if (matches.length >= 3) break;
 
-  return futureEvents.map((event) => {
-    const competition = event.competitions?.[0];
-    const competitors = competition?.competitors || [];
-    const homeCompetitor = competitors.find((c) => c.homeAway === 'home');
-    const awayCompetitor = competitors.find((c) => c.homeAway === 'away');
+    try {
+      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard?dates=${date}`;
+      const response = await axios.get(url, {
+        headers: { 'Accept': 'application/json' },
+        timeout: 10000,
+      });
 
-    const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
-    const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
+      const events = response.data?.events || [];
 
-    const seasonType = event.seasonType?.name || '';
-    const seasonDisplay = event.season?.displayName || '';
-    const competitionName = seasonType || seasonDisplay || 'Liga Profesional';
+      for (const event of events) {
+        if (matches.length >= 3) break;
 
-    const venue = competition?.venue?.fullName || 'Estadio no disponible';
-    const city = competition?.venue?.address?.city || '';
+        const competition = event.competitions?.[0];
+        const competitors = competition?.competitors || [];
+        const involvesTeam = competitors.some((c) => String(c.team?.id) === teamId);
 
-    const matchDate = new Date(event.date);
+        if (!involvesTeam) continue;
 
-    return {
-      homeTeam,
-      awayTeam,
-      competition: competitionName,
-      date: matchDate.toISOString(),
-      timestamp: Math.floor(matchDate.getTime() / 1000),
-      venue,
-      city,
-      source: 'ESPN',
-    };
-  });
+        // Only include future events
+        const eventDate = new Date(event.date);
+        if (eventDate <= now) continue;
+
+        const homeCompetitor = competitors.find((c) => c.homeAway === 'home');
+        const awayCompetitor = competitors.find((c) => c.homeAway === 'away');
+
+        const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
+        const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
+
+        const seasonSlug = event.season?.slug || '';
+        const competitionName = seasonSlug
+          ? seasonSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+          : 'Liga Profesional';
+
+        const venue = competition?.venue?.fullName || 'Estadio no disponible';
+        const city = competition?.venue?.address?.city || '';
+
+        matches.push({
+          homeTeam,
+          awayTeam,
+          competition: competitionName,
+          date: eventDate.toISOString(),
+          timestamp: Math.floor(eventDate.getTime() / 1000),
+          venue,
+          city,
+          source: 'ESPN',
+        });
+      }
+    } catch (err) {
+      // Skip failed date, continue with next
+      console.error(`Scoreboard fetch failed for ${date}:`, err.message);
+    }
+  }
+
+  if (matches.length === 0) return null;
+
+  return matches;
 }
 
 /**
