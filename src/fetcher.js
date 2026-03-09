@@ -94,10 +94,11 @@ async function fetchNextMatches(teamName) {
 }
 
 /**
- * Fetch up to 3 next matches by scanning ESPN scoreboard day by day.
+ * Fetch up to 3 next matches by scanning ESPN scoreboard in parallel batches.
  * The /schedule endpoint doesn't reliably return future events,
  * so we query the scoreboard for each day over the next 30 days
  * and collect matches involving our team.
+ * Requests are batched in groups of 5 for parallelism.
  */
 async function fetchMultipleFromESPN(teamInfo, teamName) {
   const teamId = String(teamInfo.id);
@@ -115,60 +116,78 @@ async function fetchMultipleFromESPN(teamInfo, teamName) {
     dates.push(`${yyyy}${mm}${dd}`);
   }
 
-  // Query scoreboard for each date until we find 3 matches
-  for (const date of dates) {
-    if (matches.length >= 3) break;
-
+  // Fetch a single date's scoreboard and extract matching events
+  async function fetchDate(date) {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard?dates=${date}`;
     try {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/scoreboard?dates=${date}`;
       const response = await axios.get(url, {
         headers: { 'Accept': 'application/json' },
         timeout: 10000,
       });
-
-      const events = response.data?.events || [];
-
-      for (const event of events) {
-        if (matches.length >= 3) break;
-
-        const competition = event.competitions?.[0];
-        const competitors = competition?.competitors || [];
-        const involvesTeam = competitors.some((c) => String(c.team?.id) === teamId);
-
-        if (!involvesTeam) continue;
-
-        // Only include future events
-        const eventDate = new Date(event.date);
-        if (eventDate <= now) continue;
-
-        const homeCompetitor = competitors.find((c) => c.homeAway === 'home');
-        const awayCompetitor = competitors.find((c) => c.homeAway === 'away');
-
-        const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
-        const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
-
-        const seasonSlug = event.season?.slug || '';
-        const competitionName = seasonSlug
-          ? seasonSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-          : 'Liga Profesional';
-
-        const venue = competition?.venue?.fullName || 'Estadio no disponible';
-        const city = competition?.venue?.address?.city || '';
-
-        matches.push({
-          homeTeam,
-          awayTeam,
-          competition: competitionName,
-          date: eventDate.toISOString(),
-          timestamp: Math.floor(eventDate.getTime() / 1000),
-          venue,
-          city,
-          source: 'ESPN',
-        });
-      }
+      return response.data?.events || [];
     } catch (err) {
-      // Skip failed date, continue with next
       console.error(`Scoreboard fetch failed for ${date}:`, err.message);
+      return [];
+    }
+  }
+
+  // Process events from a batch and extract team matches
+  function extractMatches(events) {
+    const found = [];
+    for (const event of events) {
+      const competition = event.competitions?.[0];
+      const competitors = competition?.competitors || [];
+      const involvesTeam = competitors.some((c) => String(c.team?.id) === teamId);
+
+      if (!involvesTeam) continue;
+
+      const eventDate = new Date(event.date);
+      if (eventDate <= now) continue;
+
+      const homeCompetitor = competitors.find((c) => c.homeAway === 'home');
+      const awayCompetitor = competitors.find((c) => c.homeAway === 'away');
+
+      const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
+      const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
+
+      const seasonSlug = event.season?.slug || '';
+      const competitionName = seasonSlug
+        ? seasonSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        : 'Liga Profesional';
+
+      const venue = competition?.venue?.fullName || 'Estadio no disponible';
+      const city = competition?.venue?.address?.city || '';
+
+      found.push({
+        homeTeam,
+        awayTeam,
+        competition: competitionName,
+        date: eventDate.toISOString(),
+        timestamp: Math.floor(eventDate.getTime() / 1000),
+        venue,
+        city,
+        source: 'ESPN',
+      });
+    }
+    return found;
+  }
+
+  // Process dates in batches of 5 for parallel fetching
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < dates.length; i += BATCH_SIZE) {
+    if (matches.length >= 3) break;
+
+    const batch = dates.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(batch.map(fetchDate));
+
+    // Process results in chronological order
+    for (const events of batchResults) {
+      if (matches.length >= 3) break;
+      const found = extractMatches(events);
+      for (const m of found) {
+        if (matches.length >= 3) break;
+        matches.push(m);
+      }
     }
   }
 
@@ -257,7 +276,7 @@ async function fetchFromESPNScoreboard(teamInfo, teamName) {
 
     const isScheduled = comp.status?.type?.state === 'pre';
     const involvesTeam = comp.competitors?.some(
-      (c) => String(c.id) === teamId
+      (c) => String(c.team?.id) === teamId
     );
 
     return isScheduled && involvesTeam;
