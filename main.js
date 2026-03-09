@@ -10,8 +10,8 @@ function createWindow() {
     height: 640,
     frame: false,
     transparent: false,
-    resizable: false,
-    backgroundColor: '#1a1a1a',
+    resizable: true,
+    backgroundColor: '#000000',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

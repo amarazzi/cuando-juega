@@ -1,34 +1,6 @@
 /**
- * ¿Cuándo Juega? — Renderer Process
+ * Cuando Juega — Renderer Process (Vercel Design System)
  */
-
-// Team primary colors for the card accent border
-const TEAM_COLORS = {
-  'River Plate': '#d62828',
-  'Boca Juniors': '#003da5',
-  'Racing Club': '#6cb4ee',
-  'Independiente': '#c8102e',
-  'San Lorenzo': '#1c3b6e',
-  'Huracán': '#ffffff',
-  'Vélez Sársfield': '#003da5',
-  'Estudiantes': '#d62828',
-  'Lanús': '#8b0000',
-  'Defensa y Justicia': '#2e7d32',
-  'Talleres': '#1c3b6e',
-  'Belgrano': '#6cb4ee',
-  'Godoy Cruz': '#ffffff',
-  "Newell's Old Boys": '#d62828',
-  'Rosario Central': '#f5e642',
-  'Tigre': '#003da5',
-  'Banfield': '#2e7d32',
-  'Gimnasia LP': '#1c3b6e',
-  'Arsenal de Sarandí': '#6cb4ee',
-  'Platense': '#8b4513',
-  'Barracas Central': '#d62828',
-  'Riestra': '#d62828',
-  'Central Córdoba': '#1a1a1a',
-  'Instituto': '#d62828',
-};
 
 // DOM Elements
 const teamSelect = document.getElementById('teamSelect');
@@ -36,23 +8,10 @@ const searchBtn = document.getElementById('searchBtn');
 const loadingState = document.getElementById('loadingState');
 const errorState = document.getElementById('errorState');
 const errorMessage = document.getElementById('errorMessage');
-const resultCard = document.getElementById('resultCard');
-const cardAccent = document.getElementById('cardAccent');
+const resultsContainer = document.getElementById('resultsContainer');
 const retryBtnError = document.getElementById('retryBtnError');
-const refreshBtn = document.getElementById('refreshBtn');
 const minimizeBtn = document.getElementById('minimizeBtn');
 const closeBtn = document.getElementById('closeBtn');
-
-// Result card elements
-const competitionEl = document.getElementById('competition');
-const homeTeamEl = document.getElementById('homeTeam');
-const awayTeamEl = document.getElementById('awayTeam');
-const matchTimeEl = document.getElementById('matchTime');
-const matchDateEl = document.getElementById('matchDate');
-const relativeDateEl = document.getElementById('relativeDate');
-const venueNameEl = document.getElementById('venueName');
-const venueCityEl = document.getElementById('venueCity');
-const dataSourceEl = document.getElementById('dataSource');
 
 let currentTeam = '';
 
@@ -82,14 +41,14 @@ async function init() {
 function showState(state) {
   loadingState.classList.remove('visible');
   errorState.classList.remove('visible');
-  resultCard.classList.remove('visible');
+  resultsContainer.classList.remove('visible');
 
   if (state === 'loading') {
     loadingState.classList.add('visible');
   } else if (state === 'error') {
     errorState.classList.add('visible');
   } else if (state === 'result') {
-    resultCard.classList.add('visible');
+    resultsContainer.classList.add('visible');
   }
   // 'idle' shows nothing
 }
@@ -99,27 +58,8 @@ function showState(state) {
 // ===========================
 
 /**
- * Formats a date to Spanish Argentina locale.
- * Example: "Sábado 15 de marzo de 2025"
- */
-function formatDateSpanish(date) {
-  const options = {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  };
-
-  let formatted = date.toLocaleDateString('es-AR', options);
-  // Capitalize first letter
-  formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
-  return formatted;
-}
-
-/**
- * Formats the time in ART (UTC-3).
- * Example: "20:00 HS"
+ * Formats time in ART (UTC-3).
+ * Example: "19:45"
  */
 function formatTimeART(date) {
   const options = {
@@ -128,18 +68,36 @@ function formatTimeART(date) {
     hour12: false,
     timeZone: 'America/Argentina/Buenos_Aires',
   };
-
-  const time = date.toLocaleTimeString('es-AR', options);
-  return `${time} HS`;
+  return date.toLocaleTimeString('es-AR', options);
 }
 
 /**
- * Returns a relative date string like "en 3 días" or "hace 2 días".
+ * Formats a short date for the card line.
+ * Example: "Mié 11 Mar 2026"
+ */
+function formatShortDate(date) {
+  const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+  // Convert to ART
+  const artDate = new Date(
+    date.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
+  );
+
+  const dayName = days[artDate.getDay()];
+  const day = artDate.getDate();
+  const month = months[artDate.getMonth()];
+  const year = artDate.getFullYear();
+
+  return `${dayName} ${day} ${month} ${year}`;
+}
+
+/**
+ * Returns a relative date string like "en 3 días" or "hoy".
  */
 function getRelativeDate(date) {
   const now = new Date();
 
-  // Convert both to ART for comparison
   const artNow = new Date(
     now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
   );
@@ -152,17 +110,17 @@ function getRelativeDate(date) {
 
   if (diffDays === 0) {
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-    if (diffHours <= 0) return 'AHORA';
-    if (diffHours === 1) return 'EN 1 HORA';
-    return `EN ${diffHours} HORAS`;
+    if (diffHours <= 0) return 'ahora';
+    if (diffHours === 1) return 'en 1 hora';
+    return `en ${diffHours} horas`;
   } else if (diffDays === 1) {
-    return 'MAÑANA';
+    return 'mañana';
   } else if (diffDays === -1) {
-    return 'AYER';
+    return 'ayer';
   } else if (diffDays > 1) {
-    return `EN ${diffDays} DÍAS`;
+    return `en ${diffDays} días`;
   } else {
-    return `HACE ${Math.abs(diffDays)} DÍAS`;
+    return `hace ${Math.abs(diffDays)} días`;
   }
 }
 
@@ -186,7 +144,7 @@ async function searchMatch() {
     }
 
     const match = response.data;
-    displayMatch(match, teamName);
+    displayMatch(match, true);
   } catch (err) {
     let msg = err.message || 'Error desconocido';
 
@@ -203,27 +161,57 @@ async function searchMatch() {
   }
 }
 
-function displayMatch(match, teamName) {
+/**
+ * Build and display a match card.
+ * @param {object} match - Match data
+ * @param {boolean} isFirst - Whether this is the first (next) match
+ */
+function displayMatch(match, isFirst) {
   const matchDate = new Date(match.date);
 
-  // Set accent color
-  const color = TEAM_COLORS[teamName] || '#f5e642';
-  cardAccent.style.background = color;
+  // Clear previous results
+  resultsContainer.innerHTML = '';
 
-  // Populate card
-  competitionEl.textContent = match.competition;
-  homeTeamEl.textContent = match.homeTeam.toUpperCase();
-  awayTeamEl.textContent = match.awayTeam.toUpperCase();
-  matchTimeEl.textContent = formatTimeART(matchDate);
-  matchDateEl.textContent = formatDateSpanish(matchDate);
-  relativeDateEl.textContent = getRelativeDate(matchDate);
+  const card = document.createElement('div');
+  card.className = isFirst ? 'match-card next-match' : 'match-card';
 
-  venueNameEl.textContent = match.venue || 'POR CONFIRMAR';
-  venueCityEl.textContent = match.city || '';
+  let html = '';
 
-  dataSourceEl.textContent = `FUENTE: ${match.source}`;
+  // Next match pill (only for the first card)
+  if (isFirst) {
+    html += '<div class="next-pill">PRÓXIMO</div>';
+  }
+
+  // Tournament
+  html += `<div class="match-tournament">${escapeHtml(match.competition)}</div>`;
+
+  // Teams — "Equipo A  —  Equipo B" with em dash
+  const homeTeam = match.homeTeam;
+  const awayTeam = match.awayTeam;
+  html += `<div class="match-teams">${escapeHtml(homeTeam)}  &mdash;  ${escapeHtml(awayTeam)}</div>`;
+
+  // Time + date on one line: "19:45  ·  Mié 11 Mar 2026"
+  const time = formatTimeART(matchDate);
+  const shortDate = formatShortDate(matchDate);
+  html += `<div class="match-datetime">${time}  &middot;  ${shortDate}</div>`;
+
+  // Relative time: "en 2 días"
+  const relative = getRelativeDate(matchDate);
+  html += `<div class="match-relative">${escapeHtml(relative)}</div>`;
+
+  card.innerHTML = html;
+  resultsContainer.appendChild(card);
 
   showState('result');
+}
+
+/**
+ * Simple HTML escape helper.
+ */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ===========================
@@ -241,12 +229,6 @@ teamSelect.addEventListener('keydown', (e) => {
 retryBtnError.addEventListener('click', () => {
   if (currentTeam) {
     teamSelect.value = currentTeam;
-    searchMatch();
-  }
-});
-
-refreshBtn.addEventListener('click', () => {
-  if (currentTeam) {
     searchMatch();
   }
 });
