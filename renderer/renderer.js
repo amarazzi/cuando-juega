@@ -40,7 +40,6 @@ const errorMessage = document.getElementById('errorMessage');
 const resultCard = document.getElementById('resultCard');
 const cardAccent = document.getElementById('cardAccent');
 const retryBtnError = document.getElementById('retryBtnError');
-const refreshBtn = document.getElementById('refreshBtn');
 const minimizeBtn = document.getElementById('minimizeBtn');
 const closeBtn = document.getElementById('closeBtn');
 
@@ -404,12 +403,6 @@ teamInput.addEventListener('keydown', (e) => {
 retryBtnError.addEventListener('click', () => {
   if (currentTeam) {
     teamInput.value = currentTeam;
-    searchMatch();
-  }
-});
-
-refreshBtn.addEventListener('click', () => {
-  if (currentTeam) {
     searchMatch();
   }
 });
