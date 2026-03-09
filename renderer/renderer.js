@@ -99,9 +99,9 @@ function showSuggestions(query) {
     const matchStart = normalizedTeam.indexOf(normalizedQuery);
 
     if (matchStart >= 0 && query.trim()) {
-      const before = team.substring(0, matchStart);
-      const match = team.substring(matchStart, matchStart + normalizedQuery.length);
-      const after = team.substring(matchStart + normalizedQuery.length);
+      const before = escapeHTML(team.substring(0, matchStart));
+      const match = escapeHTML(team.substring(matchStart, matchStart + normalizedQuery.length));
+      const after = escapeHTML(team.substring(matchStart + normalizedQuery.length));
       li.innerHTML = before + '<span class="match-highlight">' + match + '</span>' + after;
     } else {
       li.textContent = team;
