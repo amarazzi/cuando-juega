@@ -299,6 +299,7 @@ async function searchMatch() {
         'No se encontr\u00f3 "' + inputValue + '". Revis\u00e1 el nombre e intent\u00e1 de nuevo.';
       showState('error-not-found');
     } else if (msg.includes('ENOTFOUND') || msg.includes('ENETUNREACH') || msg.includes('network') || msg.includes('timeout') || msg.includes('ECONNREFUSED')) {
+      document.getElementById('errorNetworkMsg').textContent = 'Verificá tu conexión a internet e intentá de nuevo.';
       showState('error-network');
     } else if (msg.includes('No se encontraron') || msg.includes('no upcoming')) {
       document.getElementById('errorNoMatchesMsg').textContent =
