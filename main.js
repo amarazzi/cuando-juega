@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { fetchNextMatch, getTeamNames } = require('./src/fetcher');
 
 let mainWindow;
@@ -17,7 +18,9 @@ function createWindow() {
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.js'),
     },
-    icon: path.join(__dirname, 'assets', 'icon.png'),
+    icon: fs.existsSync(path.join(__dirname, 'assets', 'icon.png'))
+      ? path.join(__dirname, 'assets', 'icon.png')
+      : undefined,
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));

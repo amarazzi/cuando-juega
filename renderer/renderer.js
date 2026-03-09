@@ -152,9 +152,11 @@ function getRelativeDate(date) {
 
   if (diffDays === 0) {
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-    if (diffHours <= 0) return 'AHORA';
+    if (diffHours === 0) return 'AHORA';
     if (diffHours === 1) return 'EN 1 HORA';
-    return `EN ${diffHours} HORAS`;
+    if (diffHours > 1) return `EN ${diffHours} HORAS`;
+    if (diffHours === -1) return 'HACE 1 HORA';
+    return `HACE ${Math.abs(diffHours)} HORAS`;
   } else if (diffDays === 1) {
     return 'MAÑANA';
   } else if (diffDays === -1) {
