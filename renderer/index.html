@@ -4,19 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; script-src 'self';">
-  <title>¿Cuándo Juega?</title>
+  <title>Cuando Juega</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <!-- Custom Titlebar -->
   <div class="titlebar" id="titlebar">
-    <div class="titlebar-title">⚽ ¿CUÁNDO JUEGA?</div>
+    <div class="titlebar-title">cuando juega</div>
     <div class="titlebar-controls">
-      <button class="titlebar-btn minimize-btn" id="minimizeBtn" title="Minimizar">─</button>
-      <button class="titlebar-btn close-btn" id="closeBtn" title="Cerrar">✕</button>
+      <button class="titlebar-btn minimize-btn" id="minimizeBtn" title="Minimizar">&#x2500;</button>
+      <button class="titlebar-btn close-btn" id="closeBtn" title="Cerrar">&#x2715;</button>
     </div>
   </div>
 
@@ -24,14 +24,13 @@
   <div class="container">
     <!-- Search Section -->
     <div class="search-section">
-      <label class="search-label" for="teamSelect">ELEGÍ TU EQUIPO</label>
       <div class="search-row">
         <div class="select-wrapper">
           <select id="teamSelect" class="team-select">
-            <option value="">Seleccioná un equipo...</option>
+            <option value="">Selecciona un equipo...</option>
           </select>
         </div>
-        <button id="searchBtn" class="search-btn">¿CUÁNDO JUEGA?</button>
+        <button id="searchBtn" class="search-btn">Buscar</button>
       </div>
     </div>
 
@@ -42,57 +41,17 @@
         <span class="dot"></span>
         <span class="dot"></span>
       </div>
-      <p class="loading-text">BUSCANDO PRÓXIMO PARTIDO...</p>
+      <p class="loading-text">Buscando partidos...</p>
     </div>
 
     <!-- Error State -->
     <div class="error-state" id="errorState">
-      <div class="error-icon">😔</div>
-      <p class="error-message" id="errorMessage">No se encontraron próximos partidos.</p>
-      <button class="retry-btn" id="retryBtnError">REINTENTAR</button>
+      <p class="error-message" id="errorMessage">No se encontraron partidos.</p>
+      <button class="retry-btn" id="retryBtnError">Reintentar</button>
     </div>
 
-    <!-- Result Card -->
-    <div class="result-card" id="resultCard">
-      <div class="card-accent" id="cardAccent"></div>
-      <div class="card-content">
-        <!-- Competition -->
-        <div class="card-competition" id="competition"></div>
-
-        <!-- Teams -->
-        <div class="card-teams">
-          <span class="team-name home" id="homeTeam"></span>
-          <span class="vs-label">VS</span>
-          <span class="team-name away" id="awayTeam"></span>
-        </div>
-
-        <div class="card-divider"></div>
-
-        <!-- Time (large) -->
-        <div class="card-time" id="matchTime"></div>
-
-        <!-- Date -->
-        <div class="card-date" id="matchDate"></div>
-
-        <!-- Relative date -->
-        <div class="card-relative" id="relativeDate"></div>
-
-        <div class="card-divider"></div>
-
-        <!-- Venue -->
-        <div class="card-venue">
-          <div class="venue-label">ESTADIO</div>
-          <div class="venue-name" id="venueName"></div>
-          <div class="venue-city" id="venueCity"></div>
-        </div>
-
-        <!-- Source -->
-        <div class="card-source" id="dataSource"></div>
-
-        <!-- Refresh Button -->
-        <button class="refresh-btn" id="refreshBtn">↻ ACTUALIZAR</button>
-      </div>
-    </div>
+    <!-- Results -->
+    <div class="results-container" id="resultsContainer"></div>
   </div>
 
   <script src="renderer.js"></script>
