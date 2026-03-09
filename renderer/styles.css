@@ -26,6 +26,7 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* ===========================
@@ -122,12 +123,12 @@ body {
   width: 100%;
 }
 
-.select-wrapper {
+.input-wrapper {
   position: relative;
   width: 100%;
 }
 
-.team-select {
+.team-input {
   width: 100%;
   padding: 12px 16px;
   background: var(--card-bg);
@@ -137,24 +138,72 @@ body {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 16px;
   font-weight: 500;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8578' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
   transition: border-color 0.2s ease;
 }
 
-.team-select:focus {
+.team-input::placeholder {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.team-input:focus {
   outline: none;
   border-color: var(--accent);
 }
 
-.team-select option {
-  background: var(--card-bg);
+/* Suggestions dropdown */
+.suggestions-list {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #2a2a2a;
+  border: 2px solid #444;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestions-list.visible {
+  display: block;
+}
+
+.suggestions-list li {
+  padding: 10px 16px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
   color: var(--text);
-  padding: 8px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.suggestions-list li:hover,
+.suggestions-list li.active {
+  background: #383838;
+  color: var(--accent);
+}
+
+.suggestions-list li .match-highlight {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.suggestions-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.suggestions-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 2px;
 }
 
 .search-btn {

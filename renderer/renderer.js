@@ -31,7 +31,8 @@ const TEAM_COLORS = {
 };
 
 // DOM Elements
-const teamSelect = document.getElementById('teamSelect');
+const teamInput = document.getElementById('teamInput');
+const suggestionsList = document.getElementById('suggestionsList');
 const searchBtn = document.getElementById('searchBtn');
 const loadingState = document.getElementById('loadingState');
 const errorState = document.getElementById('errorState');
@@ -55,6 +56,8 @@ const venueCityEl = document.getElementById('venueCity');
 const dataSourceEl = document.getElementById('dataSource');
 
 let currentTeam = '';
+let allTeams = [];
+let activeSuggestionIndex = -1;
 
 // ===========================
 // Initialize
@@ -64,15 +67,114 @@ async function init() {
   try {
     const teams = await window.api.getTeamNames();
     teams.sort((a, b) => a.localeCompare(b, 'es'));
-    teams.forEach((team) => {
-      const option = document.createElement('option');
-      option.value = team;
-      option.textContent = team;
-      teamSelect.appendChild(option);
-    });
+    allTeams = teams;
   } catch (err) {
     console.error('Failed to load team names:', err);
   }
+}
+
+// ===========================
+// Autocomplete
+// ===========================
+
+/**
+ * Normalize a string for accent-insensitive comparison.
+ */
+function normalize(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/**
+ * Filter teams based on the input text.
+ */
+function filterTeams(query) {
+  if (!query.trim()) return allTeams;
+  const normalizedQuery = normalize(query);
+  return allTeams.filter((team) => normalize(team).includes(normalizedQuery));
+}
+
+/**
+ * Find the best exact match for the input value.
+ * Returns the team name if it matches exactly (case/accent insensitive), else null.
+ */
+function findExactMatch(query) {
+  const normalizedQuery = normalize(query.trim());
+  return allTeams.find((team) => normalize(team) === normalizedQuery) || null;
+}
+
+/**
+ * Render the suggestions list.
+ */
+function showSuggestions(query) {
+  const filtered = filterTeams(query);
+  suggestionsList.innerHTML = '';
+  activeSuggestionIndex = -1;
+
+  if (filtered.length === 0) {
+    suggestionsList.classList.remove('visible');
+    return;
+  }
+
+  filtered.forEach((team, index) => {
+    const li = document.createElement('li');
+    li.dataset.index = index;
+
+    // Highlight matching part
+    const normalizedTeam = normalize(team);
+    const normalizedQuery = normalize(query);
+    const matchStart = normalizedTeam.indexOf(normalizedQuery);
+
+    if (matchStart >= 0 && query.trim()) {
+      const before = team.substring(0, matchStart);
+      const match = team.substring(matchStart, matchStart + query.trim().length);
+      const after = team.substring(matchStart + query.trim().length);
+      li.innerHTML = `${before}<span class="match-highlight">${match}</span>${after}`;
+    } else {
+      li.textContent = team;
+    }
+
+    li.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Prevent blur before click fires
+      selectTeam(team);
+    });
+
+    suggestionsList.appendChild(li);
+  });
+
+  suggestionsList.classList.add('visible');
+}
+
+function hideSuggestions() {
+  suggestionsList.classList.remove('visible');
+  activeSuggestionIndex = -1;
+}
+
+function selectTeam(teamName) {
+  teamInput.value = teamName;
+  currentTeam = teamName;
+  hideSuggestions();
+}
+
+/**
+ * Navigate suggestions with keyboard (arrow keys).
+ */
+function navigateSuggestions(direction) {
+  const items = suggestionsList.querySelectorAll('li');
+  if (items.length === 0) return;
+
+  // Remove current active
+  if (activeSuggestionIndex >= 0 && activeSuggestionIndex < items.length) {
+    items[activeSuggestionIndex].classList.remove('active');
+  }
+
+  activeSuggestionIndex += direction;
+
+  // Wrap around
+  if (activeSuggestionIndex < 0) activeSuggestionIndex = items.length - 1;
+  if (activeSuggestionIndex >= items.length) activeSuggestionIndex = 0;
+
+  items[activeSuggestionIndex].classList.add('active');
+  items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
 }
 
 // ===========================
@@ -173,9 +275,32 @@ function getRelativeDate(date) {
 // ===========================
 
 async function searchMatch() {
-  const teamName = teamSelect.value;
-  if (!teamName) return;
+  const inputValue = teamInput.value.trim();
+  if (!inputValue) return;
 
+  hideSuggestions();
+
+  // Try exact match first, then find best partial match
+  let teamName = findExactMatch(inputValue);
+  if (!teamName) {
+    const filtered = filterTeams(inputValue);
+    if (filtered.length === 1) {
+      teamName = filtered[0];
+    } else if (filtered.length > 1) {
+      // Show suggestions if ambiguous
+      showSuggestions(inputValue);
+      return;
+    }
+  }
+
+  if (!teamName) {
+    errorMessage.textContent = `No se encontró el equipo "${inputValue}". Probá con otro nombre.`;
+    showState('error');
+    return;
+  }
+
+  // Update input with the canonical team name
+  teamInput.value = teamName;
   currentTeam = teamName;
   searchBtn.disabled = true;
   showState('loading');
@@ -234,15 +359,51 @@ function displayMatch(match, teamName) {
 
 searchBtn.addEventListener('click', searchMatch);
 
-teamSelect.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    searchMatch();
+// Input event: show suggestions as user types
+teamInput.addEventListener('input', () => {
+  showSuggestions(teamInput.value);
+});
+
+// Focus: show all teams if input is empty, or filtered list
+teamInput.addEventListener('focus', () => {
+  showSuggestions(teamInput.value);
+});
+
+// Blur: hide suggestions (slight delay for mousedown to fire)
+teamInput.addEventListener('blur', () => {
+  setTimeout(() => hideSuggestions(), 150);
+});
+
+// Keyboard navigation in input
+teamInput.addEventListener('keydown', (e) => {
+  const items = suggestionsList.querySelectorAll('li');
+  const isVisible = suggestionsList.classList.contains('visible');
+
+  if (e.key === 'ArrowDown' && isVisible) {
+    e.preventDefault();
+    navigateSuggestions(1);
+  } else if (e.key === 'ArrowUp' && isVisible) {
+    e.preventDefault();
+    navigateSuggestions(-1);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (isVisible && activeSuggestionIndex >= 0 && activeSuggestionIndex < items.length) {
+      // Select the highlighted suggestion
+      const selectedText = items[activeSuggestionIndex].textContent;
+      selectTeam(selectedText);
+      searchMatch();
+    } else {
+      // Just search with whatever is typed
+      searchMatch();
+    }
+  } else if (e.key === 'Escape') {
+    hideSuggestions();
   }
 });
 
 retryBtnError.addEventListener('click', () => {
   if (currentTeam) {
-    teamSelect.value = currentTeam;
+    teamInput.value = currentTeam;
     searchMatch();
   }
 });

@@ -24,12 +24,11 @@
   <div class="container">
     <!-- Search Section -->
     <div class="search-section">
-      <label class="search-label" for="teamSelect">ELEGÍ TU EQUIPO</label>
+      <label class="search-label" for="teamInput">ELEGÍ TU EQUIPO</label>
       <div class="search-row">
-        <div class="select-wrapper">
-          <select id="teamSelect" class="team-select">
-            <option value="">Seleccioná un equipo...</option>
-          </select>
+        <div class="input-wrapper">
+          <input type="text" id="teamInput" class="team-input" placeholder="Escribí un equipo..." autocomplete="off" spellcheck="false">
+          <ul class="suggestions-list" id="suggestionsList"></ul>
         </div>
         <button id="searchBtn" class="search-btn">¿CUÁNDO JUEGA?</button>
       </div>
