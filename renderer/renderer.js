@@ -100,8 +100,8 @@ function showSuggestions(query) {
 
     if (matchStart >= 0 && query.trim()) {
       const before = team.substring(0, matchStart);
-      const match = team.substring(matchStart, matchStart + query.trim().length);
-      const after = team.substring(matchStart + query.trim().length);
+      const match = team.substring(matchStart, matchStart + normalizedQuery.length);
+      const after = team.substring(matchStart + normalizedQuery.length);
       li.innerHTML = before + '<span class="match-highlight">' + match + '</span>' + after;
     } else {
       li.textContent = team;
@@ -217,7 +217,12 @@ function getRelativeDate(date) {
   );
 
   const diffMs = artMatch.getTime() - artNow.getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  // Compare calendar dates (not raw time diff) to avoid rounding issues
+  // e.g. 8AM now vs 9PM today = 13hrs, Math.round(13/24) = 1 = "MAÑANA" (wrong)
+  const artNowDate = new Date(artNow.getFullYear(), artNow.getMonth(), artNow.getDate());
+  const artMatchDate = new Date(artMatch.getFullYear(), artMatch.getMonth(), artMatch.getDate());
+  const diffDays = Math.round((artMatchDate.getTime() - artNowDate.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays === 0) {
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
