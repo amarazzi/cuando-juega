@@ -451,9 +451,24 @@ body {
 .card-teams {
   display: flex;
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0;
   margin-bottom: 12px;
+}
+
+.team-block {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team-crest {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .team-name {
@@ -594,6 +609,15 @@ body {
 
 .result-card.compact .team-name {
   font-size: 24px;
+}
+
+.result-card.compact .team-crest {
+  width: 18px;
+  height: 18px;
+}
+
+.result-card.compact .team-block {
+  gap: 6px;
 }
 
 .result-card.compact .vs-label {

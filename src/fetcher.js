@@ -158,9 +158,14 @@ async function fetchMultipleFromESPN(teamInfo, teamName) {
       const venue = competition?.venue?.fullName || 'Estadio no disponible';
       const city = competition?.venue?.address?.city || '';
 
+      const homeLogo = homeCompetitor?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${homeCompetitor?.team?.id || 0}.png`;
+      const awayLogo = awayCompetitor?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${awayCompetitor?.team?.id || 0}.png`;
+
       found.push({
         homeTeam,
         awayTeam,
+        homeLogo,
+        awayLogo,
         competition: competitionName,
         date: eventDate.toISOString(),
         timestamp: Math.floor(eventDate.getTime() / 1000),
@@ -231,6 +236,11 @@ async function fetchFromESPN(teamInfo, teamName) {
   const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
   const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
 
+  const homeLogos = homeCompetitor?.team?.logos || [];
+  const awayLogos = awayCompetitor?.team?.logos || [];
+  const homeLogo = (homeLogos.find(l => l.rel?.includes('dark')) || homeLogos[0])?.href || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${homeCompetitor?.team?.id || 0}.png`;
+  const awayLogo = (awayLogos.find(l => l.rel?.includes('dark')) || awayLogos[0])?.href || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${awayCompetitor?.team?.id || 0}.png`;
+
   const seasonType = nextEvent.seasonType?.name || '';
   const seasonDisplay = nextEvent.season?.displayName || '';
   const competitionName = seasonType || seasonDisplay || 'Liga Profesional';
@@ -243,6 +253,8 @@ async function fetchFromESPN(teamInfo, teamName) {
   return {
     homeTeam,
     awayTeam,
+    homeLogo,
+    awayLogo,
     competition: competitionName,
     date: matchDate.toISOString(),
     timestamp: Math.floor(matchDate.getTime() / 1000),
@@ -293,6 +305,8 @@ async function fetchFromESPNScoreboard(teamInfo, teamName) {
 
   const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
   const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
+  const homeLogo = homeCompetitor?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${homeCompetitor?.team?.id || 0}.png`;
+  const awayLogo = awayCompetitor?.team?.logo || `https://a.espncdn.com/i/teamlogos/soccer/500-dark/${awayCompetitor?.team?.id || 0}.png`;
 
   const competitionName =
     matchEvent.season?.slug?.replace(/-/g, ' ')?.replace(/\b\w/g, (c) => c.toUpperCase()) ||
@@ -306,6 +320,8 @@ async function fetchFromESPNScoreboard(teamInfo, teamName) {
   return {
     homeTeam,
     awayTeam,
+    homeLogo,
+    awayLogo,
     competition: competitionName,
     date: matchDate.toISOString(),
     timestamp: Math.floor(matchDate.getTime() / 1000),
