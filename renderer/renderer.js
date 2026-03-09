@@ -332,10 +332,6 @@ function createMatchCard(match, accentColor, isPrimary) {
   const card = document.createElement('div');
   card.className = isPrimary ? 'result-card' : 'result-card compact';
 
-  const accent = document.createElement('div');
-  accent.className = 'card-accent';
-  accent.style.background = accentColor;
-
   const content = document.createElement('div');
   content.className = 'card-content';
 
@@ -345,7 +341,6 @@ function createMatchCard(match, accentColor, isPrimary) {
     content.innerHTML = buildCompactCardHTML(match, matchDate);
   }
 
-  card.appendChild(accent);
   card.appendChild(content);
 
   return card;
@@ -355,7 +350,7 @@ function buildPrimaryCardHTML(match, matchDate) {
   const time = formatTimeART(matchDate);
   const date = formatDateSpanish(matchDate);
   const relative = getRelativeDate(matchDate);
-  const venue = match.venue || 'POR CONFIRMAR';
+  const venue = match.venue || '';
   const city = match.city || '';
 
   let html = '';
@@ -369,14 +364,15 @@ function buildPrimaryCardHTML(match, matchDate) {
   html += '<div class="card-time">' + escapeHTML(time) + '</div>';
   html += '<div class="card-date">' + escapeHTML(date) + '</div>';
   html += '<div class="card-relative">' + escapeHTML(relative) + '</div>';
-  html += '<div class="card-divider"></div>';
-  html += '<div class="card-venue">';
-  html += '<div class="venue-label">ESTADIO</div>';
-  html += '<div class="venue-name">' + escapeHTML(venue) + '</div>';
-  if (city) {
-    html += '<div class="venue-city">' + escapeHTML(city) + '</div>';
+  if (venue) {
+    html += '<div class="card-divider"></div>';
+    html += '<div class="card-venue">';
+    html += '<div class="venue-name">' + escapeHTML(venue) + '</div>';
+    if (city) {
+      html += '<div class="venue-city">' + escapeHTML(city) + '</div>';
+    }
+    html += '</div>';
   }
-  html += '</div>';
   html += '<div class="card-source-icon">';
   html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">';
   html += '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>';
