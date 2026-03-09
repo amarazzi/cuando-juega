@@ -1,0 +1,36 @@
+{
+  "name": "cuando-juega",
+  "version": "1.0.0",
+  "description": "¿Cuándo Juega? - Buscá el próximo partido de tu equipo argentino",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "author": "amarazzi",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "ar.cuandojuega.app",
+    "productName": "¿Cuándo Juega?",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
