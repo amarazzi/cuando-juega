@@ -71,6 +71,82 @@ async function fetchNextMatch(teamName) {
 }
 
 /**
+ * Fetches the next 3 matches for the given team.
+ * @param {string} teamName - The display name of the team
+ * @returns {Promise<object[]>} Array of match data objects (up to 3)
+ */
+async function fetchNextMatches(teamName) {
+  const teamInfo = TEAM_MAP[teamName];
+  if (!teamInfo) {
+    throw new Error(`Equipo no encontrado: ${teamName}`);
+  }
+
+  try {
+    const results = await fetchMultipleFromESPN(teamInfo, teamName);
+    if (results && results.length > 0) return results;
+  } catch (err) {
+    console.error('ESPN multi-match fetch failed:', err.message);
+  }
+
+  // Fallback to single match
+  const single = await fetchNextMatch(teamName);
+  return [single];
+}
+
+/**
+ * Fetch up to 3 next matches from ESPN team schedule endpoint.
+ */
+async function fetchMultipleFromESPN(teamInfo, teamName) {
+  const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/arg.1/teams/${teamInfo.id}/schedule`;
+
+  const response = await axios.get(url, {
+    headers: { 'Accept': 'application/json' },
+    timeout: 15000,
+  });
+
+  const events = response.data?.events || [];
+  const now = new Date();
+
+  // Filter to future events only and take up to 3
+  const futureEvents = events
+    .filter((e) => new Date(e.date) > now)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 3);
+
+  if (futureEvents.length === 0) return null;
+
+  return futureEvents.map((event) => {
+    const competition = event.competitions?.[0];
+    const competitors = competition?.competitors || [];
+    const homeCompetitor = competitors.find((c) => c.homeAway === 'home');
+    const awayCompetitor = competitors.find((c) => c.homeAway === 'away');
+
+    const homeTeam = homeCompetitor?.team?.displayName || 'Desconocido';
+    const awayTeam = awayCompetitor?.team?.displayName || 'Desconocido';
+
+    const seasonType = event.seasonType?.name || '';
+    const seasonDisplay = event.season?.displayName || '';
+    const competitionName = seasonType || seasonDisplay || 'Liga Profesional';
+
+    const venue = competition?.venue?.fullName || 'Estadio no disponible';
+    const city = competition?.venue?.address?.city || '';
+
+    const matchDate = new Date(event.date);
+
+    return {
+      homeTeam,
+      awayTeam,
+      competition: competitionName,
+      date: matchDate.toISOString(),
+      timestamp: Math.floor(matchDate.getTime() / 1000),
+      venue,
+      city,
+      source: 'ESPN',
+    };
+  });
+}
+
+/**
  * Fetch next match from ESPN public API (team detail endpoint).
  * This endpoint returns a `nextEvent` array for the team.
  */
@@ -189,4 +265,4 @@ async function fetchFromESPNScoreboard(teamInfo, teamName) {
   };
 }
 
-module.exports = { fetchNextMatch, getTeamNames, TEAM_MAP };
+module.exports = { fetchNextMatch, fetchNextMatches, getTeamNames, TEAM_MAP };

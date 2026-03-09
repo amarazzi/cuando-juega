@@ -35,24 +35,13 @@ const teamInput = document.getElementById('teamInput');
 const suggestionsList = document.getElementById('suggestionsList');
 const searchBtn = document.getElementById('searchBtn');
 const loadingState = document.getElementById('loadingState');
-const errorState = document.getElementById('errorState');
-const errorMessage = document.getElementById('errorMessage');
-const resultCard = document.getElementById('resultCard');
-const cardAccent = document.getElementById('cardAccent');
+const errorNotFound = document.getElementById('errorNotFound');
+const errorNoMatches = document.getElementById('errorNoMatches');
+const errorNetwork = document.getElementById('errorNetwork');
+const resultsContainer = document.getElementById('resultsContainer');
 const retryBtnError = document.getElementById('retryBtnError');
 const minimizeBtn = document.getElementById('minimizeBtn');
 const closeBtn = document.getElementById('closeBtn');
-
-// Result card elements
-const competitionEl = document.getElementById('competition');
-const homeTeamEl = document.getElementById('homeTeam');
-const awayTeamEl = document.getElementById('awayTeam');
-const matchTimeEl = document.getElementById('matchTime');
-const matchDateEl = document.getElementById('matchDate');
-const relativeDateEl = document.getElementById('relativeDate');
-const venueNameEl = document.getElementById('venueName');
-const venueCityEl = document.getElementById('venueCity');
-const dataSourceEl = document.getElementById('dataSource');
 
 let currentTeam = '';
 let allTeams = [];
@@ -76,34 +65,21 @@ async function init() {
 // Autocomplete
 // ===========================
 
-/**
- * Normalize a string for accent-insensitive comparison.
- */
 function normalize(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-/**
- * Filter teams based on the input text.
- */
 function filterTeams(query) {
   if (!query.trim()) return allTeams;
   const normalizedQuery = normalize(query);
   return allTeams.filter((team) => normalize(team).includes(normalizedQuery));
 }
 
-/**
- * Find the best exact match for the input value.
- * Returns the team name if it matches exactly (case/accent insensitive), else null.
- */
 function findExactMatch(query) {
   const normalizedQuery = normalize(query.trim());
   return allTeams.find((team) => normalize(team) === normalizedQuery) || null;
 }
 
-/**
- * Render the suggestions list.
- */
 function showSuggestions(query) {
   const filtered = filterTeams(query);
   suggestionsList.innerHTML = '';
@@ -118,7 +94,6 @@ function showSuggestions(query) {
     const li = document.createElement('li');
     li.dataset.index = index;
 
-    // Highlight matching part
     const normalizedTeam = normalize(team);
     const normalizedQuery = normalize(query);
     const matchStart = normalizedTeam.indexOf(normalizedQuery);
@@ -127,13 +102,13 @@ function showSuggestions(query) {
       const before = team.substring(0, matchStart);
       const match = team.substring(matchStart, matchStart + query.trim().length);
       const after = team.substring(matchStart + query.trim().length);
-      li.innerHTML = `${before}<span class="match-highlight">${match}</span>${after}`;
+      li.innerHTML = before + '<span class="match-highlight">' + match + '</span>' + after;
     } else {
       li.textContent = team;
     }
 
     li.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // Prevent blur before click fires
+      e.preventDefault();
       selectTeam(team);
     });
 
@@ -154,21 +129,16 @@ function selectTeam(teamName) {
   hideSuggestions();
 }
 
-/**
- * Navigate suggestions with keyboard (arrow keys).
- */
 function navigateSuggestions(direction) {
   const items = suggestionsList.querySelectorAll('li');
   if (items.length === 0) return;
 
-  // Remove current active
   if (activeSuggestionIndex >= 0 && activeSuggestionIndex < items.length) {
     items[activeSuggestionIndex].classList.remove('active');
   }
 
   activeSuggestionIndex += direction;
 
-  // Wrap around
   if (activeSuggestionIndex < 0) activeSuggestionIndex = items.length - 1;
   if (activeSuggestionIndex >= items.length) activeSuggestionIndex = 0;
 
@@ -182,27 +152,34 @@ function navigateSuggestions(direction) {
 
 function showState(state) {
   loadingState.classList.remove('visible');
-  errorState.classList.remove('visible');
-  resultCard.classList.remove('visible');
+  errorNotFound.classList.remove('visible');
+  errorNoMatches.classList.remove('visible');
+  errorNetwork.classList.remove('visible');
+  resultsContainer.classList.remove('visible');
 
-  if (state === 'loading') {
-    loadingState.classList.add('visible');
-  } else if (state === 'error') {
-    errorState.classList.add('visible');
-  } else if (state === 'result') {
-    resultCard.classList.add('visible');
+  switch (state) {
+    case 'loading':
+      loadingState.classList.add('visible');
+      break;
+    case 'error-not-found':
+      errorNotFound.classList.add('visible');
+      break;
+    case 'error-no-matches':
+      errorNoMatches.classList.add('visible');
+      break;
+    case 'error-network':
+      errorNetwork.classList.add('visible');
+      break;
+    case 'results':
+      resultsContainer.classList.add('visible');
+      break;
   }
-  // 'idle' shows nothing
 }
 
 // ===========================
 // Date Formatting
 // ===========================
 
-/**
- * Formats a date to Spanish Argentina locale.
- * Example: "Sábado 15 de marzo de 2025"
- */
 function formatDateSpanish(date) {
   const options = {
     weekday: 'long',
@@ -213,15 +190,10 @@ function formatDateSpanish(date) {
   };
 
   let formatted = date.toLocaleDateString('es-AR', options);
-  // Capitalize first letter
   formatted = formatted.charAt(0).toUpperCase() + formatted.slice(1);
   return formatted;
 }
 
-/**
- * Formats the time in ART (UTC-3).
- * Example: "20:00 HS"
- */
 function formatTimeART(date) {
   const options = {
     hour: '2-digit',
@@ -231,16 +203,12 @@ function formatTimeART(date) {
   };
 
   const time = date.toLocaleTimeString('es-AR', options);
-  return `${time} HS`;
+  return time + ' HS';
 }
 
-/**
- * Returns a relative date string like "en 3 días" or "hace 2 días".
- */
 function getRelativeDate(date) {
   const now = new Date();
 
-  // Convert both to ART for comparison
   const artNow = new Date(
     now.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' })
   );
@@ -255,17 +223,17 @@ function getRelativeDate(date) {
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
     if (diffHours === 0) return 'AHORA';
     if (diffHours === 1) return 'EN 1 HORA';
-    if (diffHours > 1) return `EN ${diffHours} HORAS`;
+    if (diffHours > 1) return 'EN ' + diffHours + ' HORAS';
     if (diffHours === -1) return 'HACE 1 HORA';
-    return `HACE ${Math.abs(diffHours)} HORAS`;
+    return 'HACE ' + Math.abs(diffHours) + ' HORAS';
   } else if (diffDays === 1) {
-    return 'MAÑANA';
+    return 'MA\u00d1ANA';
   } else if (diffDays === -1) {
     return 'AYER';
   } else if (diffDays > 1) {
-    return `EN ${diffDays} DÍAS`;
+    return 'EN ' + diffDays + ' D\u00cdAS';
   } else {
-    return `HACE ${Math.abs(diffDays)} DÍAS`;
+    return 'HACE ' + Math.abs(diffDays) + ' D\u00cdAS';
   }
 }
 
@@ -279,77 +247,169 @@ async function searchMatch() {
 
   hideSuggestions();
 
-  // Try exact match first, then find best partial match
   let teamName = findExactMatch(inputValue);
   if (!teamName) {
     const filtered = filterTeams(inputValue);
     if (filtered.length === 1) {
       teamName = filtered[0];
     } else if (filtered.length > 1) {
-      // Show suggestions if ambiguous
       showSuggestions(inputValue);
       return;
     }
   }
 
   if (!teamName) {
-    errorMessage.textContent = `No se encontró el equipo "${inputValue}". Probá con otro nombre.`;
-    showState('error');
+    document.getElementById('errorNotFoundMsg').textContent =
+      'No se encontr\u00f3 "' + inputValue + '". Revis\u00e1 el nombre e intent\u00e1 de nuevo.';
+    showState('error-not-found');
     return;
   }
 
-  // Update input with the canonical team name
   teamInput.value = teamName;
   currentTeam = teamName;
   searchBtn.disabled = true;
   showState('loading');
 
   try {
-    const response = await window.api.fetchNextMatch(teamName);
+    const response = await window.api.fetchNextMatches(teamName);
 
     if (!response.success) {
       throw new Error(response.error);
     }
 
-    const match = response.data;
-    displayMatch(match, teamName);
-  } catch (err) {
-    let msg = err.message || 'Error desconocido';
-
-    if (msg.includes('ENOTFOUND') || msg.includes('ENETUNREACH') || msg.includes('network')) {
-      msg = 'Sin conexión a internet. Verificá tu conexión e intentá de nuevo.';
-    } else if (msg.includes('No se encontraron')) {
-      msg = `${teamName} no tiene próximos partidos programados por el momento.`;
+    const matches = response.data;
+    if (!matches || matches.length === 0) {
+      document.getElementById('errorNoMatchesMsg').textContent =
+        teamName + ' no tiene pr\u00f3ximos partidos agendados por el momento.';
+      showState('error-no-matches');
+      return;
     }
 
-    errorMessage.textContent = msg;
-    showState('error');
+    displayMatches(matches, teamName);
+  } catch (err) {
+    const msg = err.message || '';
+
+    if (msg.includes('no encontrado') || msg.includes('not found')) {
+      document.getElementById('errorNotFoundMsg').textContent =
+        'No se encontr\u00f3 "' + inputValue + '". Revis\u00e1 el nombre e intent\u00e1 de nuevo.';
+      showState('error-not-found');
+    } else if (msg.includes('ENOTFOUND') || msg.includes('ENETUNREACH') || msg.includes('network') || msg.includes('timeout') || msg.includes('ECONNREFUSED')) {
+      showState('error-network');
+    } else if (msg.includes('No se encontraron') || msg.includes('no upcoming')) {
+      document.getElementById('errorNoMatchesMsg').textContent =
+        teamName + ' no tiene pr\u00f3ximos partidos agendados por el momento.';
+      showState('error-no-matches');
+    } else {
+      document.getElementById('errorNetworkMsg').textContent = msg;
+      showState('error-network');
+    }
   } finally {
     searchBtn.disabled = false;
   }
 }
 
-function displayMatch(match, teamName) {
-  const matchDate = new Date(match.date);
+function displayMatches(matches, teamName) {
+  resultsContainer.innerHTML = '';
 
-  // Set accent color
   const color = TEAM_COLORS[teamName] || '#f5e642';
-  cardAccent.style.background = color;
 
-  // Populate card
-  competitionEl.textContent = match.competition;
-  homeTeamEl.textContent = match.homeTeam.toUpperCase();
-  awayTeamEl.textContent = match.awayTeam.toUpperCase();
-  matchTimeEl.textContent = formatTimeART(matchDate);
-  matchDateEl.textContent = formatDateSpanish(matchDate);
-  relativeDateEl.textContent = getRelativeDate(matchDate);
+  matches.forEach((match, index) => {
+    const isPrimary = index === 0;
+    const card = createMatchCard(match, color, isPrimary);
+    resultsContainer.appendChild(card);
+  });
 
-  venueNameEl.textContent = match.venue || 'POR CONFIRMAR';
-  venueCityEl.textContent = match.city || '';
+  showState('results');
+}
 
-  dataSourceEl.textContent = `FUENTE: ${match.source}`;
+function createMatchCard(match, accentColor, isPrimary) {
+  const matchDate = new Date(match.date);
+  const card = document.createElement('div');
+  card.className = isPrimary ? 'result-card' : 'result-card compact';
 
-  showState('result');
+  const accent = document.createElement('div');
+  accent.className = 'card-accent';
+  accent.style.background = accentColor;
+
+  const content = document.createElement('div');
+  content.className = 'card-content';
+
+  if (isPrimary) {
+    content.innerHTML = buildPrimaryCardHTML(match, matchDate);
+  } else {
+    content.innerHTML = buildCompactCardHTML(match, matchDate);
+  }
+
+  card.appendChild(accent);
+  card.appendChild(content);
+
+  return card;
+}
+
+function buildPrimaryCardHTML(match, matchDate) {
+  const time = formatTimeART(matchDate);
+  const date = formatDateSpanish(matchDate);
+  const relative = getRelativeDate(matchDate);
+  const venue = match.venue || 'POR CONFIRMAR';
+  const city = match.city || '';
+
+  let html = '';
+  html += '<div class="card-competition">' + escapeHTML(match.competition) + '</div>';
+  html += '<div class="card-teams">';
+  html += '<span class="team-name home">' + escapeHTML(match.homeTeam.toUpperCase()) + '</span>';
+  html += '<span class="vs-label">VS</span>';
+  html += '<span class="team-name away">' + escapeHTML(match.awayTeam.toUpperCase()) + '</span>';
+  html += '</div>';
+  html += '<div class="card-divider"></div>';
+  html += '<div class="card-time">' + escapeHTML(time) + '</div>';
+  html += '<div class="card-date">' + escapeHTML(date) + '</div>';
+  html += '<div class="card-relative">' + escapeHTML(relative) + '</div>';
+  html += '<div class="card-divider"></div>';
+  html += '<div class="card-venue">';
+  html += '<div class="venue-label">ESTADIO</div>';
+  html += '<div class="venue-name">' + escapeHTML(venue) + '</div>';
+  if (city) {
+    html += '<div class="venue-city">' + escapeHTML(city) + '</div>';
+  }
+  html += '</div>';
+  html += '<div class="card-source-icon">';
+  html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">';
+  html += '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>';
+  html += '<line x1="12" y1="8" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+  html += '<circle cx="12" cy="16.5" r="1" fill="currentColor"/>';
+  html += '</svg>';
+  html += '<div class="card-source-tooltip">FUENTE: ' + escapeHTML(match.source || 'ESPN') + '</div>';
+  html += '</div>';
+
+  return html;
+}
+
+function buildCompactCardHTML(match, matchDate) {
+  const time = formatTimeART(matchDate);
+  const date = formatDateSpanish(matchDate);
+  const relative = getRelativeDate(matchDate);
+
+  let html = '';
+  html += '<div class="card-competition">' + escapeHTML(match.competition) + '</div>';
+  html += '<div class="card-teams">';
+  html += '<span class="team-name home">' + escapeHTML(match.homeTeam.toUpperCase()) + '</span>';
+  html += '<span class="vs-label">VS</span>';
+  html += '<span class="team-name away">' + escapeHTML(match.awayTeam.toUpperCase()) + '</span>';
+  html += '</div>';
+  html += '<div class="card-divider"></div>';
+  html += '<div class="card-time-row">';
+  html += '<div class="card-time">' + escapeHTML(time) + '</div>';
+  html += '<div class="card-date">' + escapeHTML(date) + '</div>';
+  html += '</div>';
+  html += '<div class="card-relative">' + escapeHTML(relative) + '</div>';
+
+  return html;
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ===========================
@@ -358,22 +418,18 @@ function displayMatch(match, teamName) {
 
 searchBtn.addEventListener('click', searchMatch);
 
-// Input event: show suggestions as user types
 teamInput.addEventListener('input', () => {
   showSuggestions(teamInput.value);
 });
 
-// Focus: show all teams if input is empty, or filtered list
 teamInput.addEventListener('focus', () => {
   showSuggestions(teamInput.value);
 });
 
-// Blur: hide suggestions (slight delay for mousedown to fire)
 teamInput.addEventListener('blur', () => {
   setTimeout(() => hideSuggestions(), 150);
 });
 
-// Keyboard navigation in input
 teamInput.addEventListener('keydown', (e) => {
   const items = suggestionsList.querySelectorAll('li');
   const isVisible = suggestionsList.classList.contains('visible');
@@ -387,12 +443,10 @@ teamInput.addEventListener('keydown', (e) => {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (isVisible && activeSuggestionIndex >= 0 && activeSuggestionIndex < items.length) {
-      // Select the highlighted suggestion
       const selectedText = items[activeSuggestionIndex].textContent;
       selectTeam(selectedText);
       searchMatch();
     } else {
-      // Just search with whatever is typed
       searchMatch();
     }
   } else if (e.key === 'Escape') {

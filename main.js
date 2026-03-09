@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { fetchNextMatch, getTeamNames } = require('./src/fetcher');
+const { fetchNextMatch, fetchNextMatches, getTeamNames } = require('./src/fetcher');
 
 let mainWindow;
 
@@ -35,6 +35,15 @@ ipcMain.handle('fetch-next-match', async (_event, teamName) => {
   try {
     const match = await fetchNextMatch(teamName);
     return { success: true, data: match };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('fetch-next-matches', async (_event, teamName) => {
+  try {
+    const matches = await fetchNextMatches(teamName);
+    return { success: true, data: matches };
   } catch (error) {
     return { success: false, error: error.message };
   }
